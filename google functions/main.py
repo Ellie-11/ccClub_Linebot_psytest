@@ -1,6 +1,3 @@
-
-from linebot import LineBotApi, WebhookHandler
-from linebot.models import TextSendMessage   # 載入 TextSendMessage 模組
 import json
 
 from linebot import LineBotApi, WebhookHandler     # 載入 LINE Message API 相關函式庫
