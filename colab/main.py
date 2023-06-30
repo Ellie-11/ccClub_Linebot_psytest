@@ -1,6 +1,7 @@
 # 主要程式碼 main.py
 from flask_ngrok import run_with_ngrok          # colab 使用，本機環境請刪除
 from flask import Flask, request, session
+import os
 
 import json
 
@@ -11,8 +12,6 @@ from linebot.models import PostbackAction, URIAction
 from linebot.models import MessageAction, TemplateSendMessage, ImageCarouselTemplate, ImageCarouselColumn, ButtonsTemplate
 from linebot.models import FlexSendMessage, BubbleContainer, ImageComponent
 from linebot.exceptions import InvalidSignatureError
-
-import os
 
 from firebase import firebase
 # ccClub project 的Firebase Realtime database URL
@@ -39,15 +38,16 @@ q2_choice = { 'A':'冰可樂/氣泡水', 'B':'冰咖啡', 'C':'微冰無糖茶�
 #測驗問題3
 q3_title = '晴朗無比的好天氣，你看見蔚藍天空的一朵雲，雲的形狀看起來像是？'
 q3_choice = { 'A':'催狂魔', 'B':'一隻烏龜', 'C':'是鯨魚', 'D':'就是一片雲該有的形狀' }
-#測驗問4
+#測驗問題4
 q4_title = '辦公室冷氣吹好吹滿，上班族必備小物必須有？'
 q4_choice = { 'A':'妮妮媽媽的兔兔', 'B':'社畜以公司為家需要拖鞋', 'C':'舒適午睡枕/毛毯', 'D':'提醒喝水大水壺' }
 #測驗問題5
 q5_title = '暑假出遊但卻塞在高速公路上，這時需要音樂嗨起來，歌單想來點？'
 q5_choice = { 'A':'台味好！獨立搖滾聽團仔', 'B':'Kpop韓團系列', 'C':'英文歌曲pop music', 'D':'爵士樂 不死' }
 
+#主要的程式碼
 @app.route("/", methods=['POST'])
-def linebot(): #主要的程式碼(進入點)
+def linebot(): 
     def test_result(points):                     # 測驗結果計算公式
        type_a = '人人稱羨的快樂阿宅94你'
        des_a = '不用前進世界的盡頭，也能有滿足於自我的快樂！沒有哪裡比待在家裡更適合你！無論是追劇或是離不開床，擁有冷氣就擁有純粹的快樂，不用特別去哪開運。'
