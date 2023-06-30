@@ -9,6 +9,7 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage  # 載入�
 from linebot.models import StickerSendMessage, ImageSendMessage, LocationSendMessage  # 載入模組
 from linebot.models import PostbackAction, URIAction
 from linebot.models import MessageAction, TemplateSendMessage, ImageCarouselTemplate, ImageCarouselColumn, ButtonsTemplate
+from linebot.models import FlexSendMessage, BubbleContainer, ImageComponent
 from linebot.exceptions import InvalidSignatureError
 
 import os
