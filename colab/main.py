@@ -261,7 +261,7 @@ def linebot(): #主要的程式碼(進入點)
                   ]
               )))
 
-       if msg == '開始測驗':                    # 開始測驗樣板
+       if msg in ['開始測驗','再玩一次']:                    # 開始測驗樣板
         reset()  # 重置測驗
 
         line_bot_api.reply_message(tk,TemplateSendMessage(
@@ -332,7 +332,7 @@ def linebot(): #主要的程式碼(進入點)
       }
     }
   ]
-}))
+}) )
           line_bot_api.reply_message(tk, reply_bye_array)
 
        elif msg == 'Got it! 開始吧！':
@@ -407,7 +407,54 @@ def linebot(): #主要的程式碼(進入點)
             reply_result_array.append( TextSendMessage(text = result[1]))  # 回覆測驗結果訊息(description)
             reply_result_array.append( ImageSendMessage(original_content_url = result[2],
                           preview_image_url = result[2])) # 回覆測驗結果訊息(image)
-
+            reply_result_array.append( FlexSendMessage(         # 回覆flex message 內容
+              alt_text='再玩一次',
+              contents = {
+  "type": "carousel",
+  "contents": [
+    {
+      "type": "bubble",
+      "size": "kilo",
+      "body": {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "image",
+            # 伊布燦笑圖
+            "url": "https://mrmad.com.tw/wp-content/uploads/2016/07/pokemon-go-eevee-evolution-cover.png",
+            "size": "full",
+            "margin": "none",
+            "position": "relative",
+            "gravity": "center",
+            "aspectMode": "cover",
+            "aspectRatio": "20:13",
+            "align": "center"
+          },
+          {
+            "type": "text",
+            "text": "再玩一次",
+            "position": "relative",
+            "align": "start",
+            "gravity": "center",
+            "wrap": False,
+            "margin": "lg",
+            "color": "#6e89b2",
+            "weight": "bold",
+            "style": "normal",
+            "decoration": "none",
+            "action": {
+              "type": "message",
+              "label": "action",
+              "text": "再玩一次"
+            }
+          }
+        ],
+        "position": "relative"
+      }
+    }
+  ]
+}) )
             line_bot_api.reply_message(tk, reply_result_array)        # 以陣列回覆訊息
             reset()                              # 執行重置測驗
 

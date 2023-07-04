@@ -255,9 +255,9 @@ def linebot(request):
                   ]
               )))
 
-       if msg == '開始測驗':                    # 開始測驗樣板
+       if msg in ['開始測驗','再玩一次']:                    # 開始測驗樣板
         reset()  # 重置測驗
-
+        
         line_bot_api.reply_message(tk,TemplateSendMessage(
             alt_text='ButtonsTemplate',
             template=ButtonsTemplate(
@@ -341,8 +341,6 @@ def linebot(request):
           new_q1_choice = {v:k for k, v in q1_choice.items()}   # 把選項字典 value, key 互換
           ans_num = new_q1_choice.get(msg)              # 從新的字典取得答案編號
           fdb.put('/', 'Q1', 70 - ord(ans_num) - 1)       # 轉換代號為分數，並以同步新增，在節點Q1紀錄分數
-          snapshot = fdb.get('/', 'Q1')              
-          print(snapshot)                      # 輸出資料庫內容檢查
           if start:                         # 當開始標記為真
               send_question2()                  # 收到答案後，提出下一題
 
@@ -350,8 +348,6 @@ def linebot(request):
           new_q2_choice = {v:k for k, v in q2_choice.items()}
           ans_num = new_q2_choice.get(msg)
           fdb.put('/', 'Q2', 70 - ord(ans_num) - 1)     # 轉換代號為分數，並以同步新增，在節點Q2紀錄分數
-          snapshot = fdb.get('/', 'Q2')      
-          print(snapshot)                      # 輸出資料庫內容檢查
           if start:
              send_question3()                   # 收到答案後，提出下一題
              
@@ -359,49 +355,84 @@ def linebot(request):
           new_q3_choice = {v:k for k, v in q3_choice.items()}
           ans_num = new_q3_choice.get(msg)
           fdb.put('/', 'Q3', 70 - ord(ans_num) - 1)     # 轉換代號為分數，並以同步新增，在節點Q3紀錄分數
-          snapshot = fdb.get('/', 'Q3') 
-          print(snapshot)                      # 輸出資料庫內容檢查
           if start:
              send_question4()                  # 收到答案後，提出下一題
-
 
        elif msg in q4_choice.values():               # 處理 Q4 答案
           new_q4_choice = {v:k for k, v in q4_choice.items()}
           ans_num = new_q4_choice.get(msg)
           fdb.put('/', 'Q4', 70 - ord(ans_num) - 1)      # 轉換代號為分數，並以同步新增，在節點Q4紀錄分數
-          snapshot = fdb.get('/', 'Q4')
-          print(snapshot)                      # 輸出資料庫內容檢查
           if start:
              send_question5()                  # 收到答案後，提出下一題
-
 
        elif msg in q5_choice.values():               # 處理 Q5 答案
           new_q5_choice = {v:k for k, v in q5_choice.items()}
           ans_num = new_q5_choice.get(msg)
           fdb.put('/', 'Q5', 70 - ord(ans_num) - 1)      # 轉換代號為分數，並以同步新增，在節點Q5紀錄分數
-          snapshot = fdb.get('/', 'Q5')             
-          print(snapshot)                      # 輸出資料庫內容檢查
+
           check = check_points()                   # 檢查每題是否都有分數
           print(check)
 
           if start and check:                    # 如果 start 為真且 check 為真
             test_points = fdb.get('/', None)            # 取出每題分數，並以字典紀錄
-            print(test_points)                     # 印出每題分數的字典
             points_list = list(test_points.values())         # 把字典的值取出轉為串列
-            print(points_list)                     # 印出分數的串列
-            total_points = sum([int(num) for num in points_list]) # 將分數串列轉為整數後，再加總，得到總分
-            print(total_points)                     # 印出總分
-        
+            total_points = sum([int(num) for num in points_list]) # 將分數串列轉為整數後，再加總，得到總分      
 
             result = test_result(total_points)            # 執行測驗結果計算公式
-            print(result)                        # 印出測驗結果
 
             reply_result_array=[]                       # 將要回覆結果的訊息放進陣列
             reply_result_array.append( TextSendMessage(text = result[0]))  # 回覆測驗結果訊息(type)
             reply_result_array.append( TextSendMessage(text = result[1]))  # 回覆測驗結果訊息(description)
             reply_result_array.append( ImageSendMessage(original_content_url = result[2],
                           preview_image_url = result[2])) # 回覆測驗結果訊息(image)
-
+            reply_result_array.append( FlexSendMessage(         # 回覆flex message 內容
+              alt_text='再玩一次',
+              contents = {
+  "type": "carousel",
+  "contents": [
+    {
+      "type": "bubble",
+      "size": "kilo",
+      "body": {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "image",
+            # 伊布燦笑圖
+            "url": "https://mrmad.com.tw/wp-content/uploads/2016/07/pokemon-go-eevee-evolution-cover.png",
+            "size": "full",
+            "margin": "none",
+            "position": "relative",
+            "gravity": "center",
+            "aspectMode": "cover",
+            "aspectRatio": "20:13",
+            "align": "center"
+          },
+          {
+            "type": "text",
+            "text": "再玩一次",
+            "position": "relative",
+            "align": "start",
+            "gravity": "center",
+            "wrap": False,
+            "margin": "lg",
+            "color": "#6e89b2",
+            "weight": "bold",
+            "style": "normal",
+            "decoration": "none",
+            "action": {
+              "type": "message",
+              "label": "action",
+              "text": "再玩一次"
+            }
+          }
+        ],
+        "position": "relative"
+      }
+    }
+  ]
+}) )
             line_bot_api.reply_message(tk, reply_result_array)        # 以陣列回覆訊息
             reset()                              # 執行重置測驗
 
