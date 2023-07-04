@@ -30,24 +30,23 @@ start = False  # 測驗開始標誌變量
 result = 0  # 設定測驗結果類型
 
 #測驗問題1
-q1_title = '說到夏天，你第一個聯想到的是？'
+q1_title = '1.說到夏天，你第一個聯想到的是？'
 q1_choice = { 'A':'海邊', 'B':'西瓜', 'C':'啤酒', 'D':'剉冰' }
 #測驗問題2
-q2_title = '高溫走在路上熱到要融化，希望立馬來上一杯？'
+q2_title = '2.高溫走在路上熱到要融化，希望立馬來上一杯？'
 q2_choice = { 'A':'冰可樂/氣泡水', 'B':'冰咖啡', 'C':'微冰無糖茶飲', 'D':'沁涼白開水' }
 #測驗問題3
-q3_title = '晴朗無比的好天氣，你看見蔚藍天空的一朵雲，雲的形狀看起來像是？'
+q3_title = '3.晴朗無比的好天氣，你看見蔚藍天空的一朵雲，雲的形狀看起來像是？'
 q3_choice = { 'A':'催狂魔', 'B':'一隻烏龜', 'C':'是鯨魚', 'D':'就是一片雲該有的形狀' }
 #測驗問題4
-q4_title = '辦公室冷氣吹好吹滿，上班族必備小物必須有？'
+q4_title = '4.辦公室冷氣吹好吹滿，上班族必備小物必須有？'
 q4_choice = { 'A':'妮妮媽媽的兔兔', 'B':'社畜以公司為家需要拖鞋', 'C':'舒適午睡枕/毛毯', 'D':'提醒喝水大水壺' }
 #測驗問題5
-q5_title = '暑假出遊但卻塞在高速公路上，這時需要音樂嗨起來，歌單想來點？'
+q5_title = '5.暑假出遊但卻塞在高速公路上，這時需要音樂嗨起來，歌單想來點？'
 q5_choice = { 'A':'台味好！獨立搖滾聽團仔', 'B':'Kpop韓團系列', 'C':'英文歌曲pop music', 'D':'爵士樂 不死' }
 
-#主要的程式碼
 @app.route("/", methods=['POST'])
-def linebot(): 
+def linebot(): #主要的程式碼(進入點)
     def test_result(points):                     # 測驗結果計算公式
        type_a = '人人稱羨的快樂阿宅94你'
        des_a = '不用前進世界的盡頭，也能有滿足於自我的快樂！沒有哪裡比待在家裡更適合你！無論是追劇或是離不開床，擁有冷氣就擁有純粹的快樂，不用特別去哪開運。'
@@ -85,6 +84,23 @@ def linebot():
           test_type = 'E'
           return [type_e, des_e, img_e]
 
+    def check_points():
+       check_q1 = fdb.get('/', 'Q1',) != None             # 檢查是否有Q1答案，若沒有，則為 False
+       check_q2 = fdb.get('/', 'Q2',) != None             # 檢查是否有Q2答案，若沒有，則為 False
+       check_q3 = fdb.get('/', 'Q3',) != None             # 檢查是否有Q3答案，若沒有，則為 False
+       check_q4 = fdb.get('/', 'Q4',) != None             # 檢查是否有Q4答案，若沒有，則為 False
+       check_q5 = fdb.get('/', 'Q5',) != None             # 檢查是否有Q5答案，若沒有，則為 False
+       if not (check_q1 and check_q2 and check_q3 and check_q4 and check_q5):
+           return False                       # 如果有任一個為 False，就回傳 False
+       else:
+           return True                        # 反之如果都有答案，就回傳 True
+
+    def reset():                         # 執行重置測驗
+       points = 0                       # 重置測驗分數
+       start = False                      # 將開始測驗標誌改為 False
+       result = 0                       # 重置測驗結果
+       fdb.delete('/', None)                  # 將 firebase 資料全部清空
+
     body = request.get_data(as_text=True)             # 取得 request body 文字訊息
     json_data = json.loads(body)                  # 將訊息轉換為 json 格式
     print(json_data)                         # 印出 Linebot 收到的訊息
@@ -92,7 +108,9 @@ def linebot():
        signature = request.headers['X-Line-Signature']      # 加入回傳的 headers
        handler.handle(body, signature)              # 綁定訊息回傳的相關資訊
        tk = json_data['events'][0]['replyToken']         # 取得回傳訊息的 Token
-       msg = json_data['events'][0]['message']['text']   # 取得 LINE 收到的文字訊息
+       msg = json_data['events'][0]['message']['text']      # 取得 收到的文字訊息
+       tp = json_data['events'][0]['message']['type']      # 取得 收到的訊息類型
+       user_id = json_data['events'][0]['source']['userId']   # 取得使用者 ID
 
        global points  # 引用全局變量
        global start
@@ -244,9 +262,7 @@ def linebot():
               )))
 
        if msg == '開始測驗':                    # 開始測驗樣板
-        points = 0 # 重置測驗分數
-        start = True # 將開始測驗標誌改為 True
-        result = 0 # 重置測驗結果
+        reset()  # 重置測驗
 
         line_bot_api.reply_message(tk,TemplateSendMessage(
             alt_text='ButtonsTemplate',
@@ -267,14 +283,11 @@ def linebot():
             )))
 
        elif msg == '算了，太晚我就不要了':             # 使用者拒絕測驗
-          points = 0                       # 重置測驗分數
-          start = False                      # 將開始測驗標誌改為 False
-          result = 0                       # 重置測驗結果
-          fdb.delete('/', None)                  # 將 firebase 資料全部清空
+          reset()                         # 重置測驗
           reply_bye_array = []                         # 回覆使用者拒絕的訊息陣列
-          reply_bye_array.append( TextSendMessage(text='残念ですね。。。沒關係 QQ') )  # 回覆測驗結果訊息(description)           
+          reply_bye_array.append( TextSendMessage(text='残念ですね。。。沒關係 QQ') )  # 回覆測驗結果訊息(description)
           reply_bye_array.append( FlexSendMessage(               # flex message 內容
-              alt_text='hello',
+              alt_text='點我開始測驗',
               contents = {
   "type": "carousel",
   "contents": [
@@ -330,74 +343,126 @@ def linebot():
           else:
             send_question1()
 
-       elif msg in q1_choice.values():               # 處理 Q1 答案
+       elif msg in q1_choice.values() and start:               # 處理 Q1 答案
           new_q1_choice = {v:k for k, v in q1_choice.items()}   # 把選項字典 value, key 互換
           ans_num = new_q1_choice.get(msg)              # 從新的字典取得答案編號
-          if start:                        # 如果 start 為 True
-            fdb.put('/', 'Q1', 70 - ord(ans_num) - 1) # 轉換代號為分數，並以同步新增，在節點Q1紀錄分數
-            send_question2()                  # 收到答案後，提出下一題
-            # 輸出資料庫內容檢查
-            snapshot = fdb.get('/', 'Q1')
-            print(snapshot)
+          fdb.put('/', 'Q1', 70 - ord(ans_num) - 1)       # 轉換代號為分數，並以同步新增，在節點Q1紀錄分數
+          snapshot = fdb.get('/', 'Q1')              
+          print(snapshot)                      # 輸出資料庫內容檢查
+          if start:                         # 當開始標記為真
+              send_question2()                  # 收到答案後，提出下一題
 
        elif msg in q2_choice.values():               # 處理 Q2 答案
-          new_q2_choice = {v:k for k, v in q2_choice.items()}   
-          ans_num = new_q2_choice.get(msg)                   
-          if start:                         
-             fdb.put('/', 'Q2', 70 - ord(ans_num) - 1)    # 轉換代號為分數，並以同步新增，在節點Q2紀錄分數
+          new_q2_choice = {v:k for k, v in q2_choice.items()}
+          ans_num = new_q2_choice.get(msg)
+          fdb.put('/', 'Q2', 70 - ord(ans_num) - 1)     # 轉換代號為分數，並以同步新增，在節點Q2紀錄分數
+          snapshot = fdb.get('/', 'Q2')      
+          print(snapshot)                      # 輸出資料庫內容檢查
+          if start:
              send_question3()                   # 收到答案後，提出下一題
-             # 輸出資料庫內容檢查
-             snapshot = fdb.get('/', 'Q2')
-             print(snapshot)
-
+             
        elif msg in q3_choice.values():               # 處理 Q3 答案
-          new_q3_choice = {v:k for k, v in q3_choice.items()}   
+          new_q3_choice = {v:k for k, v in q3_choice.items()}
           ans_num = new_q3_choice.get(msg)
-          if start:              
-             fdb.put('/', 'Q3', 70 - ord(ans_num) - 1) # 轉換代號為分數，並以同步新增，在節點Q3紀錄分數
-             send_question4()                          # 收到答案後，提出下一題
-             # 輸出資料庫內容檢查
-             snapshot = fdb.get('/', 'Q3')
-             print(snapshot)
+          fdb.put('/', 'Q3', 70 - ord(ans_num) - 1)     # 轉換代號為分數，並以同步新增，在節點Q3紀錄分數
+          snapshot = fdb.get('/', 'Q3') 
+          print(snapshot)                      # 輸出資料庫內容檢查
+          if start:
+             send_question4()                  # 收到答案後，提出下一題
+
 
        elif msg in q4_choice.values():               # 處理 Q4 答案
-          new_q4_choice = {v:k for k, v in q4_choice.items()}   
+          new_q4_choice = {v:k for k, v in q4_choice.items()}
           ans_num = new_q4_choice.get(msg)
-          if start:           
-             fdb.put('/', 'Q4', 70 - ord(ans_num) - 1) # 轉換代號為分數，並以同步新增，在節點Q4紀錄分數
-             send_question5()                          # 收到答案後，提出下一題
-             # 輸出資料庫內容檢查
-             snapshot = fdb.get('/', 'Q4')
-             print(snapshot)
+          fdb.put('/', 'Q4', 70 - ord(ans_num) - 1)      # 轉換代號為分數，並以同步新增，在節點Q4紀錄分數
+          snapshot = fdb.get('/', 'Q4')
+          print(snapshot)                      # 輸出資料庫內容檢查
+          if start:
+             send_question5()                  # 收到答案後，提出下一題
+
 
        elif msg in q5_choice.values():               # 處理 Q5 答案
-          new_q5_choice = {v:k for k, v in q5_choice.items()}   
+          new_q5_choice = {v:k for k, v in q5_choice.items()}
           ans_num = new_q5_choice.get(msg)
-          if start:   
-            fdb.put('/', 'Q5', 70 - ord(ans_num) - 1) # 轉換代號為分數，並以同步新增，在節點Q5紀錄分數
-            # 輸出資料庫內容檢查
-            snapshot = fdb.get('/', 'Q5')
-            print(snapshot)
-            # 以字典格式輸出所有答案
-            test_points = fdb.get('/', None)
+          fdb.put('/', 'Q5', 70 - ord(ans_num) - 1)      # 轉換代號為分數，並以同步新增，在節點Q5紀錄分數
+          snapshot = fdb.get('/', 'Q5')             
+          print(snapshot)                      # 輸出資料庫內容檢查
+          check = check_points()                   # 檢查每題是否都有分數
+          print(check)
+
+          if start and check:                    # 如果 start 為真且 check 為真
+            test_points = fdb.get('/', None)            # 取出每題分數，並以字典紀錄
             print(test_points)                     # 印出每題分數的字典
-            points_list = list(test_points.values())
+            points_list = list(test_points.values())         # 把字典的值取出轉為串列
             print(points_list)                     # 印出分數的串列
             total_points = sum([int(num) for num in points_list]) # 將分數串列轉為整數後，再加總，得到總分
             print(total_points)                     # 印出總分
+        
+
             result = test_result(total_points)            # 執行測驗結果計算公式
             print(result)                        # 印出測驗結果
 
-            reply_array=[]                       # 將要回覆的訊息放進陣列
-            reply_array.append( TextSendMessage(text = result[0]))  # 回覆測驗結果訊息(type)
-            reply_array.append( TextSendMessage(text = result[1]))  # 回覆測驗結果訊息(description)
-            reply_array.append( ImageSendMessage(original_content_url = result[2], preview_image_url = result[2])) # 回覆測驗結果訊息(image)
+            reply_result_array=[]                       # 將要回覆結果的訊息放進陣列
+            reply_result_array.append( TextSendMessage(text = result[0]))  # 回覆測驗結果訊息(type)
+            reply_result_array.append( TextSendMessage(text = result[1]))  # 回覆測驗結果訊息(description)
+            reply_result_array.append( ImageSendMessage(original_content_url = result[2],
+                          preview_image_url = result[2])) # 回覆測驗結果訊息(image)
 
-            line_bot_api.reply_message(tk, reply_array)        # 以陣列回覆訊息
-            points = 0                       # 重置測驗分數
-            start = False                      # 將開始測驗標誌改為 False
-            result = 0                       # 重置測驗結果
-            fdb.delete('/', None)                  # 將 firebase 資料全部清空
+            line_bot_api.reply_message(tk, reply_result_array)        # 以陣列回覆訊息
+            reset()                              # 執行重置測驗
+
+          else:                            # 反之，如果開始標誌或check為 False
+            reset()                         # 執行重置測驗
+            reply_restart_array=[]                       # 將要回覆重新開始的訊息放進陣列
+            reply_restart_array.append( TextSendMessage(text='測驗一共有5題哦，一起做完吧！') )  # 回覆測驗結果訊息(description)
+            reply_restart_array.append( FlexSendMessage(               # flex message 內容
+              alt_text='重新開始測驗',
+              contents = {
+  "type": "carousel",
+  "contents": [
+    {
+      "type": "bubble",
+      "size": "kilo",
+      "body": {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+          {
+            "type": "image",
+            "url": "https://static0.gamerantimages.com/wordpress/wp-content/uploads/2023/03/pokemon-horizons-captain-pikachu-feature-image.jpg",
+            "size": "full",
+            "margin": "none",
+            "position": "relative",
+            "gravity": "center",
+            "aspectMode": "cover",
+            "aspectRatio": "20:13",
+            "align": "center"
+          },
+          {
+            "type": "text",
+            "text": "重新開始測驗",
+            "position": "relative",
+            "align": "start",
+            "gravity": "center",
+            "wrap": False,
+            "margin": "lg",
+            "color": "#6e89b2",
+            "weight": "bold",
+            "style": "normal",
+            "decoration": "none",
+            "action": {
+              "type": "message",
+              "label": "action",
+              "text": "開始測驗"
+            }
+          }
+        ],
+        "position": "relative"
+      }
+    }
+  ]
+}))
+            line_bot_api.reply_message(tk, reply_restart_array)
 
     except Exception as e:
         print('Error:', e)                        # 輸出詳細的錯誤訊息
