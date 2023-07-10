@@ -2,6 +2,7 @@
 from flask_ngrok import run_with_ngrok          # colab 使用，本機環境請刪除
 from flask import Flask, request, session
 import os
+import openai #匯入 open ai 模組
 
 import json
 
@@ -16,14 +17,13 @@ from linebot.exceptions import InvalidSignatureError
 from firebase import firebase
 # ccClub project 的Firebase Realtime database URL
 url = 'https://ccclub-linebot-psytest-default-rtdb.firebaseio.com/'
-fdb = firebase.FirebaseApplication(url, None)  # 初始化 Firebase Realtime database
+fdb = firebase.FirebaseApplication(url, None)             # 初始化 Firebase Realtime database
 
 app = Flask(__name__, root_path=os.getcwd())             # 初始化 Flask
 
 # ccClub proect Line 的 token, secret
-line_bot_api = LineBotApi(
-    'MYoGxJuKZbYgOdIhfiiFbm9BKeFXQAwmgkgbGNENCtAqg1XTmRGdqCzxYMmK+5homRui1cNlrDFEOU3kYKBGgkV3GHwIVwox5oHRbAUFjBuP4DyaNKXklxP0qreeCwIy5TQdKHyY8sGwWmpZAUJ1agdB04t89/1O/w1cDnyilFU=')
-handler = WebhookHandler('8ef1afb585b2ad36cbaf047e77e6e989')
+token = 'MYoGxJuKZbYgOdIhfiiFbm9BKeFXQAwmgkgbGNENCtAqg1XTmRGdqCzxYMmK+5homRui1cNlrDFEOU3kYKBGgkV3GHwIVwox5oHRbAUFjBuP4DyaNKXklxP0qreeCwIy5TQdKHyY8sGwWmpZAUJ1agdB04t89/1O/w1cDnyilFU='
+secret = '8ef1afb585b2ad36cbaf047e77e6e989'
 
 points = 0  # 設定心理測驗分數(全局變量)
 start = False  # 測驗開始標誌變量
@@ -69,27 +69,27 @@ def linebot(): #主要的程式碼(進入點)
        img_e = 'https://cdn2.ettoday.net/images/1780/1780413.jpg'
 
        if points <= 8:
-          test_type = 'A'
+          test_type = 'A'          # '人人稱羨的快樂阿宅94你'
           return [type_a, des_a, img_a]
        elif points > 8 and points <= 11:
-          test_type = 'B'
+          test_type = 'B'          # '世界祥和的溫柔派～'
           return [type_b, des_b, img_b]
        elif points > 11 and points <= 14:
-          test_type = 'C'
+          test_type = 'C'          # '你是忠於自我又富有想像力的哲學家'
           return [type_c, des_c, img_c]
        elif points > 14 and points <= 17:
-          test_type = 'D'
+          test_type = 'D'          # '你率真又自然～'
           return [type_d, des_d, img_d]
        else:
-          test_type = 'E'
+          test_type = 'E'          # '熱血仔是你！'
           return [type_e, des_e, img_e]
 
     def check_points():
-       check_q1 = fdb.get('/', 'Q1',) != None             # 檢查是否有Q1答案，若沒有，則為 False
-       check_q2 = fdb.get('/', 'Q2',) != None             # 檢查是否有Q2答案，若沒有，則為 False
-       check_q3 = fdb.get('/', 'Q3',) != None             # 檢查是否有Q3答案，若沒有，則為 False
-       check_q4 = fdb.get('/', 'Q4',) != None             # 檢查是否有Q4答案，若沒有，則為 False
-       check_q5 = fdb.get('/', 'Q5',) != None             # 檢查是否有Q5答案，若沒有，則為 False
+       check_q1 = fdb.get('/', f'{user_id}/Q1') != None             # 檢查是否有Q1答案，若無，則為 False
+       check_q2 = fdb.get('/', f'{user_id}/Q2') != None             # 檢查是否有Q2答案，若無，則為 False
+       check_q3 = fdb.get('/', f'{user_id}/Q3') != None             # 檢查是否有Q3答案，若無，則為 False
+       check_q4 = fdb.get('/', f'{user_id}/Q4') != None             # 檢查是否有Q4答案，若無，則為 False
+       check_q5 = fdb.get('/', f'{user_id}/Q5') != None             # 檢查是否有Q5答案，若無，則為 False
        if not (check_q1 and check_q2 and check_q3 and check_q4 and check_q5):
            return False                       # 如果有任一個為 False，就回傳 False
        else:
@@ -99,26 +99,29 @@ def linebot(): #主要的程式碼(進入點)
        points = 0                       # 重置測驗分數
        start = False                      # 將開始測驗標誌改為 False
        result = 0                       # 重置測驗結果
-       fdb.delete('/', None)                  # 將 firebase 資料全部清空
+       fdb.delete('/', f'{user_id}')                  # 清空firebase裡，該userid的所有資料
 
     body = request.get_data(as_text=True)             # 取得 request body 文字訊息
     json_data = json.loads(body)                  # 將訊息轉換為 json 格式
     print(json_data)                         # 印出 Linebot 收到的訊息
     try:
+       line_bot_api = LineBotApi(token)
+       handler = WebhookHandler(secret)
        signature = request.headers['X-Line-Signature']      # 加入回傳的 headers
-       handler.handle(body, signature)              # 綁定訊息回傳的相關資訊
+       handler.handle(body, signature)                   # 綁定訊息回傳的相關資訊
        tk = json_data['events'][0]['replyToken']         # 取得回傳訊息的 Token
        msg = json_data['events'][0]['message']['text']      # 取得 收到的文字訊息
        tp = json_data['events'][0]['message']['type']      # 取得 收到的訊息類型
        user_id = json_data['events'][0]['source']['userId']   # 取得使用者 ID
+       chatgpt_reply_msg = ''                 # 設定chatgpt回覆所使用的訊息
 
        global points  # 引用全局變量
        global start
        global result
 
        def send_question1():                        # 送出測驗Q1
-          if fdb.get('/', 'Q1') != None :           # 每次送出問題前，如果原本該題有分數，就將資料清空
-            fdb.delete('/', 'Q1')
+          if fdb.get('/', f'{user_id}/Q1') != None :        # 每次送出問題前，若原本該userid有該題的分數，就先清空該題資料
+            fdb.delete('/', f'{user_id}/Q1')                
           line_bot_api.reply_message(tk, TemplateSendMessage(
               alt_text='ButtonsTemplate',
               template=ButtonsTemplate(
@@ -146,8 +149,8 @@ def linebot(): #主要的程式碼(進入點)
               )))
 
        def send_question2():                        # 送出測驗Q2
-          if fdb.get('/', 'Q2') != None :           # 每次送出問題前，如果原本該題有分數，就將資料清空
-            fdb.delete('/', 'Q2')
+          if fdb.get('/', f'{user_id}/Q2') != None :        # 每次送出問題前，若原本該userid有該題的分數，就先清空該題資料
+            fdb.delete('/', f'{user_id}/Q2')                 
           line_bot_api.reply_message(tk,TemplateSendMessage(
               alt_text='ButtonsTemplate',
               template=ButtonsTemplate(
@@ -175,8 +178,8 @@ def linebot(): #主要的程式碼(進入點)
               )))
 
        def send_question3():                        # 送出測驗Q3
-          if fdb.get('/', 'Q3') != None :           # 每次送出問題前，如果原本該題有分數，就將資料清空
-            fdb.delete('/', 'Q3')
+          if fdb.get('/', f'{user_id}/Q3') != None :        # 每次送出問題前，若原本該userid有該題的分數，就先清空該題資料
+            fdb.delete('/', f'{user_id}/Q3') 
           line_bot_api.reply_message(tk,TemplateSendMessage(
               alt_text='ButtonsTemplate',
               template=ButtonsTemplate(
@@ -204,8 +207,8 @@ def linebot(): #主要的程式碼(進入點)
               )))
 
        def send_question4():                        # 送出測驗Q4
-          if fdb.get('/', 'Q4') != None :           # 每次送出問題前，如果原本該題有分數，就將資料清空
-            fdb.delete('/', 'Q4')
+          if fdb.get('/', f'{user_id}/Q4') != None :        # 每次送出問題前，若原本該userid有該題的分數，就先清空該題資料
+            fdb.delete('/', f'{user_id}/Q4') 
           line_bot_api.reply_message(tk,TemplateSendMessage(
               alt_text='ButtonsTemplate',
               template=ButtonsTemplate(
@@ -233,8 +236,8 @@ def linebot(): #主要的程式碼(進入點)
               )))
 
        def send_question5():                        # 送出測驗Q5
-          if fdb.get('/', 'Q5') != None :           # 每次送出問題前，如果原本該題有分數，就將資料清空
-            fdb.delete('/', 'Q5')
+          if fdb.get('/', f'{user_id}/Q5') != None :        # 每次送出問題前，若原本該userid有該題的分數，就先清空該題資料
+            fdb.delete('/', f'{user_id}/Q5') 
           line_bot_api.reply_message(tk,TemplateSendMessage(
               alt_text='ButtonsTemplate',
               template=ButtonsTemplate(
@@ -262,9 +265,9 @@ def linebot(): #主要的程式碼(進入點)
               )))
 
        if msg in ['開始測驗','再玩一次']:                    # 開始測驗樣板
-        reset()  # 重置測驗
+           reset()                                  # 重置測驗
 
-        line_bot_api.reply_message(tk,TemplateSendMessage(
+           line_bot_api.reply_message(tk,TemplateSendMessage(
             alt_text='ButtonsTemplate',
             template=ButtonsTemplate(
             thumbnail_image_url='https://img.dennyli.com/2019/11/1602040070-a708d22693d453d7d0df1e2855580f5b.png',
@@ -336,36 +339,45 @@ def linebot(): #主要的程式碼(進入點)
           line_bot_api.reply_message(tk, reply_bye_array)
 
        elif msg == 'Got it! 開始吧！':
-          fdb.delete('/', None)                 # 每次開始測驗前，都將所有資料清空
-          if start == False:                  # 若原本開始測驗標誌是 False，則改為 True
+          fdb.delete('/', f'{user_id}')                 # 每次開始測驗前，都清空該userid的所有資料
+          if start == False:                      # 若原本開始測驗標誌是 False，則改為 True
             start = True
-            send_question1()
+            send_question1()                      # 送出Q1題目
           else:
             send_question1()
 
        elif msg in q1_choice.values() and start:               # 處理 Q1 答案
           new_q1_choice = {v:k for k, v in q1_choice.items()}   # 把選項字典 value, key 互換
           ans_num = new_q1_choice.get(msg)              # 從新的字典取得答案編號
-          fdb.put('/', 'Q1', 70 - ord(ans_num) - 1)       # 轉換代號為分數，並以同步新增，在節點Q1紀錄分數
-          snapshot = fdb.get('/', 'Q1')              
+          this_point = 70 - ord(ans_num) - 1           # 儲存該題答案的分數(經轉換代號而來)
+          question_points = {'ans':f'{ans_num}', 'points':f'{this_point}'} #題目與分數組合的字典
+
+          fdb.put('/', f'{user_id}/Q1', question_points)       # 以同步新增，在userid/題號節點，紀錄題目與分數
+          snapshot = fdb.get('/', f'{user_id}/Q1')
           print(snapshot)                      # 輸出資料庫內容檢查
           if start:                         # 當開始標記為真
               send_question2()                  # 收到答案後，提出下一題
 
        elif msg in q2_choice.values():               # 處理 Q2 答案
           new_q2_choice = {v:k for k, v in q2_choice.items()}
-          ans_num = new_q2_choice.get(msg)
-          fdb.put('/', 'Q2', 70 - ord(ans_num) - 1)     # 轉換代號為分數，並以同步新增，在節點Q2紀錄分數
-          snapshot = fdb.get('/', 'Q2')      
+          ans_num = new_q2_choice.get(msg)              # 從新的字典取得答案編號
+          this_point = 70 - ord(ans_num) - 1           # 儲存該題答案的分數(經轉換代號而來)
+          question_points = {'ans':f'{ans_num}', 'points':f'{this_point}'} #題目與分數組合的字典
+
+          fdb.put('/', f'{user_id}/Q2', question_points)       # 以同步新增，在userid/題號節點，紀錄題目與分數
+          snapshot = fdb.get('/', f'{user_id}/Q2')
           print(snapshot)                      # 輸出資料庫內容檢查
           if start:
              send_question3()                   # 收到答案後，提出下一題
-             
+
        elif msg in q3_choice.values():               # 處理 Q3 答案
           new_q3_choice = {v:k for k, v in q3_choice.items()}
-          ans_num = new_q3_choice.get(msg)
-          fdb.put('/', 'Q3', 70 - ord(ans_num) - 1)     # 轉換代號為分數，並以同步新增，在節點Q3紀錄分數
-          snapshot = fdb.get('/', 'Q3') 
+          ans_num = new_q3_choice.get(msg)              # 從新的字典取得答案編號
+          this_point = 70 - ord(ans_num) - 1           # 儲存該題答案的分數(經轉換代號而來)
+          question_points = {'ans':f'{ans_num}', 'points':f'{this_point}'} #題目與分數組合的字典
+
+          fdb.put('/', f'{user_id}/Q3', question_points)       # 以同步新增，在userid/題號節點，紀錄題目與分數
+          snapshot = fdb.get('/', f'{user_id}/Q3')
           print(snapshot)                      # 輸出資料庫內容檢查
           if start:
              send_question4()                  # 收到答案後，提出下一題
@@ -373,9 +385,12 @@ def linebot(): #主要的程式碼(進入點)
 
        elif msg in q4_choice.values():               # 處理 Q4 答案
           new_q4_choice = {v:k for k, v in q4_choice.items()}
-          ans_num = new_q4_choice.get(msg)
-          fdb.put('/', 'Q4', 70 - ord(ans_num) - 1)      # 轉換代號為分數，並以同步新增，在節點Q4紀錄分數
-          snapshot = fdb.get('/', 'Q4')
+          ans_num = new_q4_choice.get(msg)              # 從新的字典取得答案編號
+          this_point = 70 - ord(ans_num) - 1           # 儲存該題答案的分數(經轉換代號而來)
+          question_points = {'ans':f'{ans_num}', 'points':f'{this_point}'} #題目與分數組合的字典
+
+          fdb.put('/', f'{user_id}/Q4', question_points)       # 以同步新增，在userid/題號節點，紀錄題目與分數
+          snapshot = fdb.get('/', f'{user_id}/Q4')
           print(snapshot)                      # 輸出資料庫內容檢查
           if start:
              send_question5()                  # 收到答案後，提出下一題
@@ -383,33 +398,39 @@ def linebot(): #主要的程式碼(進入點)
 
        elif msg in q5_choice.values():               # 處理 Q5 答案
           new_q5_choice = {v:k for k, v in q5_choice.items()}
-          ans_num = new_q5_choice.get(msg)
-          fdb.put('/', 'Q5', 70 - ord(ans_num) - 1)      # 轉換代號為分數，並以同步新增，在節點Q5紀錄分數
-          snapshot = fdb.get('/', 'Q5')             
+          ans_num = new_q5_choice.get(msg)              # 從新的字典取得答案編號
+          this_point = 70 - ord(ans_num) - 1           # 儲存該題答案的分數(經轉換代號而來)
+          question_points = {'ans':f'{ans_num}', 'points':f'{this_point}'} #題目與分數組合的字典
+
+          fdb.put('/', f'{user_id}/Q5', question_points)       # 以同步新增，在userid/題號節點，紀錄題目與分數
+          snapshot = fdb.get('/', f'{user_id}/Q5')
           print(snapshot)                      # 輸出資料庫內容檢查
           check = check_points()                   # 檢查每題是否都有分數
           print(check)
 
-          if start and check:                    # 如果 start 為真且 check 為真
-            test_points = fdb.get('/', None)            # 取出每題分數，並以字典紀錄
-            print(test_points)                     # 印出每題分數的字典
-            points_list = list(test_points.values())         # 把字典的值取出轉為串列
-            print(points_list)                     # 印出分數的串列
-            total_points = sum([int(num) for num in points_list]) # 將分數串列轉為整數後，再加總，得到總分
-            print(total_points)                     # 印出總分
-        
+          if start and check:                    # 若start與check皆為真
+              point_list = []                   # 建立一個存放分數的空串列
+              for num in range(1, 6):              # 1~5執行迴圈
+                  test_points = fdb.get(f'/{user_id}', f'Q{num}') # 取得user_id/Q 節點下的資料(答案、分數)
+                  print(test_points)
+                  points_value = int(test_points['points'])    # 把分數字串轉為整數
+                  point_list.append(points_value)          # 逐一加入存放分數的串列
 
-            result = test_result(total_points)            # 執行測驗結果計算公式
-            print(result)                        # 印出測驗結果
+              print(point_list)                   # 印出分數串列檢查
+              total_points = sum(point_list)           # 加總，得到總分
+              print(total_points)                     # 印出總分檢查
 
-            reply_result_array=[]                       # 將要回覆結果的訊息放進陣列
-            reply_result_array.append( TextSendMessage(text = result[0]))  # 回覆測驗結果訊息(type)
-            reply_result_array.append( TextSendMessage(text = result[1]))  # 回覆測驗結果訊息(description)
-            reply_result_array.append( ImageSendMessage(original_content_url = result[2],
+              result = test_result(total_points)            # 執行測驗結果計算公式
+              print(result)                        # 印出測驗結果
+
+              reply_result_array=[]                       # 將要回覆結果的訊息放進陣列
+              reply_result_array.append( TextSendMessage(text = result[0]))  # 回覆測驗結果訊息(type)
+              reply_result_array.append( TextSendMessage(text = result[1]))  # 回覆測驗結果訊息(description)
+              reply_result_array.append( ImageSendMessage(original_content_url = result[2],
                           preview_image_url = result[2])) # 回覆測驗結果訊息(image)
-            reply_result_array.append( FlexSendMessage(         # 回覆flex message 內容
-              alt_text='再玩一次',
-              contents = {
+              reply_result_array.append( FlexSendMessage(         # 回覆flex message 內容
+                            alt_text='再玩一次',
+                            contents = {
   "type": "carousel",
   "contents": [
     {
@@ -455,8 +476,8 @@ def linebot(): #主要的程式碼(進入點)
     }
   ]
 }) )
-            line_bot_api.reply_message(tk, reply_result_array)        # 以陣列回覆訊息
-            reset()                              # 執行重置測驗
+              line_bot_api.reply_message(tk, reply_result_array)        # 以陣列回覆訊息
+              reset()                              # 執行重置測驗
 
           else:                            # 反之，如果開始標誌或check為 False
             reset()                         # 執行重置測驗
@@ -509,7 +530,20 @@ def linebot(): #主要的程式碼(進入點)
     }
   ]
 }))
-            line_bot_api.reply_message(tk, reply_restart_array)
+            line_bot_api.reply_message(tk, reply_restart_array)        # 回覆重新開始的訊息
+
+       else:
+        openai.api_key = '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'  # Ellie的openai key
+        chatgpt_response = openai.Completion.create(
+            model = 'text-davinci-003',
+            prompt = msg,   # 將所有訊息發送給 OpenAI
+            max_tokens = 150, # 可使用的 token 數，會影響回話長度
+            temperature = 0.5,
+            )
+        # 接收到使用者訊息後，移除換行符號後，透過chatgpt回覆訊息
+        chatgpt_reply_msg = chatgpt_response["choices"][0]["text"].replace('\n','')
+        text_message = TextSendMessage(text = chatgpt_reply_msg)
+        line_bot_api.reply_message(tk, text_message)
 
     except Exception as e:
         print('Error:', e)                        # 輸出詳細的錯誤訊息
