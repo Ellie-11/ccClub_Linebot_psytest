@@ -522,7 +522,7 @@ def linebot(request):
             line_bot_api.reply_message(tk, reply_restart_array)        # 回覆重新開始的訊息
 
        else:
-        openai.api_key = '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'  # Ellie的openai key
+        openai.api_key = '/'  # Ellie的openai key
         chatgpt_response = openai.Completion.create(
             model = 'text-davinci-003',
             prompt = msg,   # 將所有訊息發送給 OpenAI
